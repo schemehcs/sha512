@@ -308,6 +308,82 @@ impl Sha512 {
         };
         self.state.finish(n, self.buf.acc_consumed() - 1)
     }
+
+    #[inline]
+    pub fn write_u8(&mut self, i: u8) {
+        self.write(&[i])
+    }
+
+    /// Writes a single `u16` into this hasher.
+    #[inline]
+    pub fn write_u16(&mut self, i: u16) {
+        self.write(&i.to_ne_bytes())
+    }
+
+    /// Writes a single `u32` into this hasher.
+    #[inline]
+    pub fn write_u32(&mut self, i: u32) {
+        self.write(&i.to_ne_bytes())
+    }
+
+    /// Writes a single `u64` into this hasher.
+    #[inline]
+    pub fn write_u64(&mut self, i: u64) {
+        self.write(&i.to_ne_bytes())
+    }
+
+    /// Writes a single `u128` into this hasher.
+    #[inline]
+    pub fn write_u128(&mut self, i: u128) {
+        self.write(&i.to_ne_bytes())
+    }
+
+    /// Writes a single `usize` into this hasher.
+    #[inline]
+    pub fn write_usize(&mut self, i: usize) {
+        self.write(&i.to_ne_bytes())
+    }
+
+    /// Writes a single `i8` into this hasher.
+    #[inline]
+    pub fn write_i8(&mut self, i: i8) {
+        self.write_u8(i as u8)
+    }
+
+    /// Writes a single `i16` into this hasher.
+    #[inline]
+    pub fn write_i16(&mut self, i: i16) {
+        self.write_u16(i as u16)
+    }
+
+    /// Writes a single `i32` into this hasher.
+    #[inline]
+    pub fn write_i32(&mut self, i: i32) {
+        self.write_u32(i as u32)
+    }
+
+    /// Writes a single `i64` into this hasher.
+    #[inline]
+    pub fn write_i64(&mut self, i: i64) {
+        self.write_u64(i as u64)
+    }
+
+    /// Writes a single `i128` into this hasher.
+    #[inline]
+    pub fn write_i128(&mut self, i: i128) {
+        self.write_u128(i as u128)
+    }
+
+    /// Writes a single `isize` into this hasher.
+    #[inline]
+    pub fn write_isize(&mut self, i: isize) {
+        self.write_usize(i as usize)
+    }
+
+    #[inline]
+    pub fn write_str(&mut self, s: &str) {
+        self.write(s.as_bytes());
+    }
 }
 
 pub fn sha512(msg: &[u8]) -> [u8; 64] {
@@ -404,12 +480,14 @@ mod tests {
 
     #[test]
     fn long_text_works() {
+        let mut hasher = Sha512::new();
         let msg = "9032fb94055d4d14e42185bdff59642b98fe6073f68f29d394620c4e698a86fb2e51351ca6997e6a164aae0b871cf789fbc6e0d863733d05903b4eb11be58d9c9032fb94055d4d1\
         4e42185bdff59642b98fe6073f68f29d394620c4e698a86fb2e51351ca6997e6a164aae0b871cf789fbc6e0d863733d05903b4eb11be58d9c9032fb94055d4d14e42185bdff59642b98fe6073f68f29d39\
         4620c4e698a86fb2e51351ca6997e6a164aae0b871cf789fbc6e0d863733d05903b4eb11be58d9ca3a8c81bc97c2560010d7389bc88aac974a104e0e2381220c6e084c4dccd1d2d17d4f86db31c2a851dc\
-        80e6681d74733c55dcd03dd96fffffabfslfjlsjfljl".as_bytes();
+        80e6681d74733c55dcd03dd96fffffabfslfjlsjfljl";
+        hasher.write_str(msg);
         let expected = "29692643bd8a4ef7aede1322b1ce892a8c1c1562adb84d532e5ba9928cd8f81a1773e5a49ea4a9b7ecaa79e493c7dffc0d15b675a87bdc9d0d1b7e9daffd218d";
-        let digest = hex::encode(sha512(&msg));
+        let digest = hex::encode(hasher.finish());
         assert_eq!(expected, digest);
     }
 
