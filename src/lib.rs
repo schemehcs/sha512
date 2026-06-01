@@ -111,6 +111,20 @@ impl Default for Vars {
     }
 }
 
+// clear memory footprint
+impl Drop for Vars {
+    fn drop(&mut self) {
+        self.a = 0;
+        self.b = 0;
+        self.c = 0;
+        self.d = 0;
+        self.e = 0;
+        self.f = 0;
+        self.g = 0;
+        self.h = 0;
+    }
+}
+
 impl Vars {
     pub fn update(&mut self, work: &[u64; 80]) {
         let mut cln = self.clone();
@@ -192,6 +206,13 @@ impl Default for State {
             work: [0; 80],
             cursor: 0,
         }
+    }
+}
+
+// clear memory footprint
+impl Drop for State {
+    fn drop(&mut self) {
+        self.work.fill(0);
     }
 }
 
@@ -389,6 +410,21 @@ mod tests {
         80e6681d74733c55dcd03dd96fffffabfslfjlsjfljl".as_bytes();
         let expected = "29692643bd8a4ef7aede1322b1ce892a8c1c1562adb84d532e5ba9928cd8f81a1773e5a49ea4a9b7ecaa79e493c7dffc0d15b675a87bdc9d0d1b7e9daffd218d";
         let digest = hex::encode(sha512(&msg));
+        assert_eq!(expected, digest);
+    }
+
+    #[test]
+    fn accumulate_test() {
+        let msg = "9032fb94055d4d14e42185bdff59642b98fe6073f68f29d394620c4e698a86fb2e51351ca6997e6a164aae0b871cf789fbc6e0d863733d05903b4eb11be58d9c9032fb94055d4d1\
+        4e42185bdff59642b98fe6073f68f29d394620c4e698a86fb2e51351ca6997e6a164aae0b871cf789fbc6e0d863733d05903b4eb11be58d9c9032fb94055d4d14e42185bdff59642b98fe6073f68f29d39\
+        4620c4e698a86fb2e51351ca6997e6a164aae0b871cf789fbc6e0d863733d05903b4eb11be58d9ca3a8c81bc97c2560010d7389bc88aac974a104e0e2381220c6e084c4dccd1d2d17d4f86db31c2a851dc\
+        80e6681d74733c55dcd03dd96fffffabfslfjlsjfljl".as_bytes();
+        let expected = "29692643bd8a4ef7aede1322b1ce892a8c1c1562adb84d532e5ba9928cd8f81a1773e5a49ea4a9b7ecaa79e493c7dffc0d15b675a87bdc9d0d1b7e9daffd218d";
+        let mut hasher = Sha512::new();
+        for ch in msg {
+            hasher.write(&[*ch]);
+        }
+        let digest = hex::encode(hasher.finish());
         assert_eq!(expected, digest);
     }
 }
