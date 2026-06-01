@@ -1,3 +1,6 @@
+use chunk_buf::{Chunk, ChunkBuf};
+use std::ops::AddAssign;
+
 static K: [u64; 80] = [
     0x428a2f98d728ae22,
     0x7137449123ef65cd,
@@ -81,105 +84,215 @@ static K: [u64; 80] = [
     0x6c44198c4a475817,
 ];
 
+#[derive(Clone)]
+struct Vars {
+    a: u64,
+    b: u64,
+    c: u64,
+    d: u64,
+    e: u64,
+    f: u64,
+    g: u64,
+    h: u64,
+}
+
+impl Default for Vars {
+    fn default() -> Self {
+        Self {
+            a: 0x6a09e667f3bcc908,
+            b: 0xbb67ae8584caa73b,
+            c: 0x3c6ef372fe94f82b,
+            d: 0xa54ff53a5f1d36f1,
+            e: 0x510e527fade682d1,
+            f: 0x9b05688c2b3e6c1f,
+            g: 0x1f83d9abfb41bd6b,
+            h: 0x5be0cd19137e2179,
+        }
+    }
+}
+
+impl Vars {
+    pub fn update(&mut self, work: &[u64; 80]) {
+        let mut cln = self.clone();
+        let (mut t1, mut t2);
+        for t in 0..80 {
+            t1 = cln
+                .h
+                .wrapping_add(Self::bsig1(cln.e))
+                .wrapping_add(Self::ch(cln.e, cln.f, cln.g))
+                .wrapping_add(K[t])
+                .wrapping_add(work[t]);
+            t2 = Self::bsig0(cln.a).wrapping_add(Self::maj(cln.a, cln.b, cln.c));
+            cln.h = cln.g;
+            cln.g = cln.f;
+            cln.f = cln.e;
+            cln.e = cln.d.wrapping_add(t1);
+            cln.d = cln.c;
+            cln.c = cln.b;
+            cln.b = cln.a;
+            cln.a = t1.wrapping_add(t2);
+        }
+        self.add_assign(cln);
+    }
+
+    pub fn digest(&self) -> [u8; 64] {
+        let mut digest: [u8; 64] = [0; 64];
+        digest[0..8].copy_from_slice(&self.a.to_be_bytes());
+        digest[8..16].copy_from_slice(&self.b.to_be_bytes());
+        digest[16..24].copy_from_slice(&self.c.to_be_bytes());
+        digest[24..32].copy_from_slice(&self.d.to_be_bytes());
+        digest[32..40].copy_from_slice(&self.e.to_be_bytes());
+        digest[40..48].copy_from_slice(&self.f.to_be_bytes());
+        digest[48..56].copy_from_slice(&self.g.to_be_bytes());
+        digest[56..64].copy_from_slice(&self.h.to_be_bytes());
+        digest
+    }
+
+    fn ch(x: u64, y: u64, z: u64) -> u64 {
+        (x & y) ^ (!x & z)
+    }
+
+    fn maj(x: u64, y: u64, z: u64) -> u64 {
+        (x & y) ^ (x & z) ^ (y & z)
+    }
+
+    fn bsig0(x: u64) -> u64 {
+        x.rotate_right(28) ^ x.rotate_right(34) ^ x.rotate_right(39)
+    }
+
+    fn bsig1(x: u64) -> u64 {
+        x.rotate_right(14) ^ x.rotate_right(18) ^ x.rotate_right(41)
+    }
+}
+
+impl AddAssign for Vars {
+    fn add_assign(&mut self, rhs: Self) {
+        self.a = self.a.wrapping_add(rhs.a);
+        self.b = self.b.wrapping_add(rhs.b);
+        self.c = self.c.wrapping_add(rhs.c);
+        self.d = self.d.wrapping_add(rhs.d);
+        self.e = self.e.wrapping_add(rhs.e);
+        self.f = self.f.wrapping_add(rhs.f);
+        self.g = self.g.wrapping_add(rhs.g);
+        self.h = self.h.wrapping_add(rhs.h);
+    }
+}
+
+#[derive(Clone)]
+struct State {
+    vars: Vars,
+    work: [u64; 80],
+    cursor: usize,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        State {
+            vars: Vars::default(),
+            work: [0; 80],
+            cursor: 0,
+        }
+    }
+}
+
+impl State {
+    pub fn update(&mut self, n: u64) {
+        self.work[self.cursor] = n;
+        self.cursor += 1;
+        if self.cursor < 16 {
+            return;
+        }
+        self.expand();
+        self.cursor = 0;
+    }
+
+    pub fn expand(&mut self) {
+        for t in 16..80 {
+            self.work[t] = Self::ssig1(self.work[t - 2])
+                .wrapping_add(self.work[t - 7])
+                .wrapping_add(Self::ssig0(self.work[t - 15]))
+                .wrapping_add(self.work[t - 16]);
+        }
+        self.vars.update(&self.work);
+    }
+
+    pub fn finish(&mut self, n: u64, byte_len: usize) -> [u8; 64] {
+        self.update(n);
+        if self.cursor < 14 {
+            self.work[self.cursor..14].fill(0);
+            self.fill_len(byte_len);
+            self.expand();
+        } else {
+            self.work[self.cursor..16].fill(0);
+            self.expand();
+            self.work[..14].fill(0);
+            self.fill_len(byte_len);
+            self.expand();
+        }
+        self.vars.digest()
+    }
+
+    fn fill_len(&mut self, byte_len: usize) {
+        let bit_len: u128 = (byte_len as u128) * 8;
+        self.work[14] = (bit_len >> 64) as u64;
+        self.work[15] = bit_len as u64;
+    }
+
+    fn ssig0(x: u64) -> u64 {
+        x.rotate_right(1) ^ x.rotate_right(8) ^ (x >> 7)
+    }
+
+    fn ssig1(x: u64) -> u64 {
+        x.rotate_right(19) ^ x.rotate_right(61) ^ (x >> 6)
+    }
+}
+
+#[derive(Clone)]
+pub struct Sha512 {
+    state: State,
+    buf: ChunkBuf<u8>,
+}
+
+impl Default for Sha512 {
+    fn default() -> Self {
+        Self {
+            state: State::default(),
+            buf: ChunkBuf::new(8),
+        }
+    }
+}
+
+impl Sha512 {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn write(&mut self, mut buf: &[u8]) {
+        while let Some(Chunk { bytes, consumed }) = self.buf.update(buf) {
+            let n = u64::from_be_bytes(bytes.try_into().unwrap());
+            self.state.update(n);
+            buf = &buf[consumed..];
+        }
+    }
+
+    pub fn finish(&mut self) -> [u8; 64] {
+        let n = match self.buf.update(&[0x80]) {
+            Some(Chunk { bytes, .. }) => u64::from_be_bytes(bytes.try_into().unwrap()),
+            None => {
+                let mut last_u64 = [0u8; 8];
+                let remainder = self.buf.remainder();
+                last_u64[..remainder.len()].copy_from_slice(remainder);
+                u64::from_be_bytes(last_u64)
+            }
+        };
+        self.state.finish(n, self.buf.acc_consumed() - 1)
+    }
+}
+
 pub fn sha512(msg: &[u8]) -> [u8; 64] {
-    let mut hs: [u64; 8] = [
-        0x6a09e667f3bcc908,
-        0xbb67ae8584caa73b,
-        0x3c6ef372fe94f82b,
-        0xa54ff53a5f1d36f1,
-        0x510e527fade682d1,
-        0x9b05688c2b3e6c1f,
-        0x1f83d9abfb41bd6b,
-        0x5be0cd19137e2179,
-    ];
-    let mut w: [u64; 80] = [0; 80];
-    let mut chunks = msg.chunks_exact(128);
-    for chunk in chunks.by_ref() {
-        sha512_block(chunk.try_into().unwrap(), &mut hs, &mut w);
-    }
-
-    let rem = chunks.remainder();
-    let rem_len = rem.len();
-    let mut last_block: [u8; 128] = [0; 128];
-    last_block[..rem_len].copy_from_slice(rem);
-    last_block[rem_len] = 0x80;
-    let msg_bit_len: u128 = msg.len() as u128 * 8;
-    if rem_len < 112 {
-        last_block[112..128].copy_from_slice(&msg_bit_len.to_be_bytes());
-        sha512_block(&last_block, &mut hs, &mut w);
-    } else {
-        sha512_block(&last_block, &mut hs, &mut w);
-        last_block[..112].fill(0);
-        last_block[112..].copy_from_slice(&msg_bit_len.to_be_bytes());
-        sha512_block(&last_block, &mut hs, &mut w);
-    }
-    let mut digest: [u8; 64] = [0; 64];
-    for i in (0..64).step_by(8) {
-        digest[i..i + 8].copy_from_slice(&hs[i / 8].to_be_bytes());
-    }
-    digest
-}
-
-pub fn sha512_block(block: &[u8; 128], hs: &mut [u64; 8], w: &mut [u64; 80]) {
-    for (t, bw) in block.chunks(8).enumerate() {
-        w[t] = u64::from_be_bytes(bw.try_into().unwrap());
-    }
-    for t in 16..80 {
-        w[t] = ssig1(w[t - 2])
-            .wrapping_add(w[t - 7])
-            .wrapping_add(ssig0(w[t - 15]))
-            .wrapping_add(w[t - 16]);
-    }
-    let [mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut h] = *hs;
-    let (mut t1, mut t2);
-    for t in 0..80 {
-        t1 = h
-            .wrapping_add(bsig1(e))
-            .wrapping_add(ch(e, f, g))
-            .wrapping_add(K[t])
-            .wrapping_add(w[t]);
-        t2 = bsig0(a).wrapping_add(maj(a, b, c));
-        h = g;
-        g = f;
-        f = e;
-        e = d.wrapping_add(t1);
-        d = c;
-        c = b;
-        b = a;
-        a = t1.wrapping_add(t2);
-    }
-    hs[0] = hs[0].wrapping_add(a);
-    hs[1] = hs[1].wrapping_add(b);
-    hs[2] = hs[2].wrapping_add(c);
-    hs[3] = hs[3].wrapping_add(d);
-    hs[4] = hs[4].wrapping_add(e);
-    hs[5] = hs[5].wrapping_add(f);
-    hs[6] = hs[6].wrapping_add(g);
-    hs[7] = hs[7].wrapping_add(h);
-}
-
-fn ch(x: u64, y: u64, z: u64) -> u64 {
-    (x & y) ^ (!x & z)
-}
-
-fn maj(x: u64, y: u64, z: u64) -> u64 {
-    (x & y) ^ (x & z) ^ (y & z)
-}
-
-fn bsig0(x: u64) -> u64 {
-    x.rotate_right(28) ^ x.rotate_right(34) ^ x.rotate_right(39)
-}
-
-fn bsig1(x: u64) -> u64 {
-    x.rotate_right(14) ^ x.rotate_right(18) ^ x.rotate_right(41)
-}
-
-fn ssig0(x: u64) -> u64 {
-    x.rotate_right(1) ^ x.rotate_right(8) ^ (x >> 7)
-}
-
-fn ssig1(x: u64) -> u64 {
-    x.rotate_right(19) ^ x.rotate_right(61) ^ (x >> 6)
+    let mut hasher = Sha512::new();
+    hasher.write(msg);
+    hasher.finish()
 }
 
 #[cfg(test)]
