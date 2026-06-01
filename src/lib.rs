@@ -218,7 +218,7 @@ impl State {
 
     pub fn finish(&mut self, n: u64, byte_len: usize) -> [u8; 64] {
         self.update(n);
-        if self.cursor < 14 {
+        if self.cursor <= 14 {
             self.work[self.cursor..14].fill(0);
             self.fill_len(byte_len);
             self.expand();
@@ -316,6 +316,56 @@ mod tests {
     }
 
     #[test]
+    fn len7_msg_works() {
+        // exactly one u64 word
+        let msg = "abcdefg".as_bytes();
+        let expected = "d716a4188569b68ab1b6dfac178e570114cdf0ea3a1cc0e31486c3e41241bc6a76424e8c37ab26f096fc85ef9886c8cb634187f4fddff645fb099f1ff54c6b8c";
+        // generate expected with: echo -n "abcdefgh" | sha512sum
+        let digest = hex::encode(sha512(msg));
+        assert_eq!(expected, digest);
+    }
+
+    #[test]
+    fn len8_msg_works() {
+        // exactly one u64 word
+        let msg = "abcdefgh".as_bytes();
+        let expected = "a3a8c81bc97c2560010d7389bc88aac974a104e0e2381220c6e084c4dccd1d2d17d4f86db31c2a851dc80e6681d74733c55dcd03dd96f6062cdda12a291ae6ce";
+        // generate expected with: echo -n "abcdefgh" | sha512sum
+        let digest = hex::encode(sha512(msg));
+        assert_eq!(expected, digest);
+    }
+
+    #[test]
+    fn len111_msg_works() {
+        // exactly one u64 word
+        let msg = "a3a8c81bc97c2560010d7389bc88aac974a104e0e2381220c6e084c4dccd1d2d17d4f86db31c2a851dc80e6681d74733c55dcd03dd96fff".as_bytes();
+        let expected = "4d859f9fe8482605fe43acf610b4dd252f964cab2d153bc5649e999b95c8c006a9e74a8a708f112aa6c4035b64eee708f7058e79f13364fe208c7112cf8a6bb3";
+        // generate expected with: echo -n "abcdefgh" | sha512sum
+        let digest = hex::encode(sha512(msg));
+        assert_eq!(expected, digest);
+    }
+
+    #[test]
+    fn len112_msg_works() {
+        // exactly one u64 word
+        let msg = "a3a8c81bc97c2560010d7389bc88aac974a104e0e2381220c6e084c4dccd1d2d17d4f86db31c2a851dc80e6681d74733c55dcd03dd96ffff".as_bytes();
+        let expected = "eda0a89f4a6b657463374a872fe207c5ba9d82374f947210ef37ffb6d5248aaf012e4e9ebb798039e4c0c2f623735a527ed355bcd026736025f8b60aab60e640";
+        // generate expected with: echo -n "abcdefgh" | sha512sum
+        let digest = hex::encode(sha512(msg));
+        assert_eq!(expected, digest);
+    }
+
+    #[test]
+    fn len113_msg_works() {
+        // exactly one u64 word
+        let msg = "a3a8c81bc97c2560010d7389bc88aac974a104e0e2381220c6e084c4dccd1d2d17d4f86db31c2a851dc80e6681d74733c55dcd03dd96fffff".as_bytes();
+        let expected = "d9ecdccdd9b343be7b62d929adda995497f476985f620704c7b8ffa594434260a95ffe5bc081894808859e9723a436195cb2079012e2725a8e50e9d6594e3136";
+        // generate expected with: echo -n "abcdefgh" | sha512sum
+        let digest = hex::encode(sha512(msg));
+        assert_eq!(expected, digest);
+    }
+
+    #[test]
     fn len127_msg_works() {
         let msg = "9032fb94055d4d14e42185bdff59642b98fe6073f68f29d394620c4e698a86fb2e51351ca6997e6a164aae0b871cf789fbc6e0d863733d05903b4eb11be58d9".as_bytes();
         let expected = "53c3f30b667f0b2f1735c779d6389490e49486cdb0ed42616af2c324c8b6eaaffb916bc5aa43921f06fc308b7744ca78b80c7893a6c1ea0a85883eab9d660456";
@@ -327,6 +377,17 @@ mod tests {
     fn len128_msg_works() {
         let msg = "9032fb94055d4d14e42185bdff59642b98fe6073f68f29d394620c4e698a86fb2e51351ca6997e6a164aae0b871cf789fbc6e0d863733d05903b4eb11be58d9c".as_bytes();
         let expected = "b591e01cadb9bbbbae79d62eca0acdca5b52494804c62c082aec76f3863210e8f811a0c431926ae9f6dc1b4fcec2adf925e00a5ad23069064190c4250772669e";
+        let digest = hex::encode(sha512(&msg));
+        assert_eq!(expected, digest);
+    }
+
+    #[test]
+    fn long_text_works() {
+        let msg = "9032fb94055d4d14e42185bdff59642b98fe6073f68f29d394620c4e698a86fb2e51351ca6997e6a164aae0b871cf789fbc6e0d863733d05903b4eb11be58d9c9032fb94055d4d1\
+        4e42185bdff59642b98fe6073f68f29d394620c4e698a86fb2e51351ca6997e6a164aae0b871cf789fbc6e0d863733d05903b4eb11be58d9c9032fb94055d4d14e42185bdff59642b98fe6073f68f29d39\
+        4620c4e698a86fb2e51351ca6997e6a164aae0b871cf789fbc6e0d863733d05903b4eb11be58d9ca3a8c81bc97c2560010d7389bc88aac974a104e0e2381220c6e084c4dccd1d2d17d4f86db31c2a851dc\
+        80e6681d74733c55dcd03dd96fffffabfslfjlsjfljl".as_bytes();
+        let expected = "29692643bd8a4ef7aede1322b1ce892a8c1c1562adb84d532e5ba9928cd8f81a1773e5a49ea4a9b7ecaa79e493c7dffc0d15b675a87bdc9d0d1b7e9daffd218d";
         let digest = hex::encode(sha512(&msg));
         assert_eq!(expected, digest);
     }
