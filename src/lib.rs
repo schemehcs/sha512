@@ -150,16 +150,19 @@ impl Vars {
     }
 
     pub fn digest(&self) -> [u8; 64] {
-        let mut digest: [u8; 64] = [0; 64];
-        digest[0..8].copy_from_slice(&self.a.to_be_bytes());
-        digest[8..16].copy_from_slice(&self.b.to_be_bytes());
-        digest[16..24].copy_from_slice(&self.c.to_be_bytes());
-        digest[24..32].copy_from_slice(&self.d.to_be_bytes());
-        digest[32..40].copy_from_slice(&self.e.to_be_bytes());
-        digest[40..48].copy_from_slice(&self.f.to_be_bytes());
-        digest[48..56].copy_from_slice(&self.g.to_be_bytes());
-        digest[56..64].copy_from_slice(&self.h.to_be_bytes());
-        digest
+        self.a
+            .to_be_bytes()
+            .into_iter()
+            .chain(self.b.to_be_bytes())
+            .chain(self.c.to_be_bytes())
+            .chain(self.d.to_be_bytes())
+            .chain(self.e.to_be_bytes())
+            .chain(self.f.to_be_bytes())
+            .chain(self.g.to_be_bytes())
+            .chain(self.h.to_be_bytes())
+            .collect::<Vec<u8>>()
+            .try_into()
+            .unwrap()
     }
 
     fn ch(x: u64, y: u64, z: u64) -> u64 {
