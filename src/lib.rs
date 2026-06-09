@@ -314,79 +314,79 @@ impl Sha512 {
     }
 
     #[inline]
-    pub fn write_u8(&mut self, i: u8) {
-        self.write(&[i]);
+    pub fn write_u8(&mut self, i: u8) -> &mut Self {
+        self.write(&[i])
     }
 
     /// Writes a single `u16` into this hasher.
     #[inline]
-    pub fn write_u16(&mut self, i: u16) {
-        self.write(&i.to_ne_bytes());
+    pub fn write_u16(&mut self, i: u16) -> &mut Self {
+        self.write(&i.to_ne_bytes())
     }
 
     /// Writes a single `u32` into this hasher.
     #[inline]
-    pub fn write_u32(&mut self, i: u32) {
-        self.write(&i.to_ne_bytes());
+    pub fn write_u32(&mut self, i: u32) -> &mut Self {
+        self.write(&i.to_ne_bytes())
     }
 
     /// Writes a single `u64` into this hasher.
     #[inline]
-    pub fn write_u64(&mut self, i: u64) {
-        self.write(&i.to_ne_bytes());
+    pub fn write_u64(&mut self, i: u64) -> &mut Self {
+        self.write(&i.to_ne_bytes())
     }
 
     /// Writes a single `u128` into this hasher.
     #[inline]
-    pub fn write_u128(&mut self, i: u128) {
-        self.write(&i.to_ne_bytes());
+    pub fn write_u128(&mut self, i: u128) -> &mut Self {
+        self.write(&i.to_ne_bytes())
     }
 
     /// Writes a single `usize` into this hasher.
     #[inline]
-    pub fn write_usize(&mut self, i: usize) {
-        self.write(&i.to_ne_bytes());
+    pub fn write_usize(&mut self, i: usize) -> &mut Self {
+        self.write(&i.to_ne_bytes())
     }
 
     /// Writes a single `i8` into this hasher.
     #[inline]
-    pub fn write_i8(&mut self, i: i8) {
-        self.write_u8(i as u8);
+    pub fn write_i8(&mut self, i: i8) -> &mut Self {
+        self.write_u8(i as u8)
     }
 
     /// Writes a single `i16` into this hasher.
     #[inline]
-    pub fn write_i16(&mut self, i: i16) {
-        self.write_u16(i as u16);
+    pub fn write_i16(&mut self, i: i16) -> &mut Self {
+        self.write_u16(i as u16)
     }
 
     /// Writes a single `i32` into this hasher.
     #[inline]
-    pub fn write_i32(&mut self, i: i32) {
-        self.write_u32(i as u32);
+    pub fn write_i32(&mut self, i: i32) -> &mut Self {
+        self.write_u32(i as u32)
     }
 
     /// Writes a single `i64` into this hasher.
     #[inline]
-    pub fn write_i64(&mut self, i: i64) {
-        self.write_u64(i as u64);
+    pub fn write_i64(&mut self, i: i64) -> &mut Self {
+        self.write_u64(i as u64)
     }
 
     /// Writes a single `i128` into this hasher.
     #[inline]
-    pub fn write_i128(&mut self, i: i128) {
-        self.write_u128(i as u128);
+    pub fn write_i128(&mut self, i: i128) -> &mut Self {
+        self.write_u128(i as u128)
     }
 
     /// Writes a single `isize` into this hasher.
     #[inline]
-    pub fn write_isize(&mut self, i: isize) {
-        self.write_usize(i as usize);
+    pub fn write_isize(&mut self, i: isize) -> &mut Self {
+        self.write_usize(i as usize)
     }
 
     #[inline]
-    pub fn write_str(&mut self, s: &str) {
-        self.write(s.as_bytes());
+    pub fn write_str(&mut self, s: &str) -> &mut Self {
+        self.write(s.as_bytes())
     }
 }
 
