@@ -1,6 +1,8 @@
 use chunk_buf::{Chunk, ChunkBuf};
 use std::ops::AddAssign;
 
+pub const HASH_LEN: usize = 64;
+
 static K: [u64; 80] = [
     0x428a2f98d728ae22,
     0x7137449123ef65cd,
@@ -149,7 +151,7 @@ impl Vars {
         self.add_assign(cln);
     }
 
-    pub fn digest(&self) -> [u8; 64] {
+    pub fn digest(&self) -> [u8; HASH_LEN] {
         self.a
             .to_be_bytes()
             .into_iter()
@@ -240,7 +242,7 @@ impl State {
         self.vars.update(&self.work);
     }
 
-    pub fn finish(&mut self, n: u64, byte_len: usize) -> [u8; 64] {
+    pub fn finish(&mut self, n: u64, byte_len: usize) -> [u8; HASH_LEN] {
         self.update(n);
         if self.cursor <= 14 {
             self.work[self.cursor..14].fill(0);
@@ -300,7 +302,7 @@ impl Sha512 {
         self
     }
 
-    pub fn finish(&mut self) -> [u8; 64] {
+    pub fn finish(&mut self) -> [u8; HASH_LEN] {
         let n = match self.buf.update(&[0x80]) {
             Some(Chunk { bytes, .. }) => u64::from_be_bytes(bytes.try_into().unwrap()),
             None => {
@@ -390,7 +392,7 @@ impl Sha512 {
     }
 }
 
-pub fn sha512(msg: &[u8]) -> [u8; 64] {
+pub fn sha512(msg: &[u8]) -> [u8; HASH_LEN] {
     let mut hasher = Sha512::new();
     hasher.write(msg);
     hasher.finish()
